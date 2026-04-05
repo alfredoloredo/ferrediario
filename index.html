@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FerreCheck - Sistema de Equipo</title>
+    <title>FerreCheck - Sistema Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -14,13 +14,10 @@
         @keyframes fall { 0% { transform: translateY(-50px) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
         .confetti { position: fixed; z-index: 100; pointer-events: none; animation: fall 3s linear forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .bg-gold-gradient { background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%); }
-        .crown-float { animation: floating 2s ease-in-out infinite; }
-        @keyframes floating { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
         body { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans">
+<body class="bg-slate-100 font-sans">
     <div id="root"></div>
 
     <script type="module">
@@ -28,9 +25,6 @@
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // ============================================================
-        // 🔑 TUS LLAVES DE CONEXIÓN (VERIFICADAS)
-        // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyBcmriLjBc_S1W86R1bucP6Jy8iAU9sv6Q",
             authDomain: "ferrecheck-tampico.firebaseapp.com",
@@ -40,7 +34,7 @@
             appId: "1:779747685492:web:bac35e4ca6c545bb8e4d21"
         };
         
-        const internalId = "ferrecheck-final-v4";
+        const internalId = "ferre-tampico-final-v6";
 
         const { useState, useEffect, useMemo } = React;
 
@@ -49,13 +43,15 @@
             const [view, setView] = useState('home');
             const [formData, setFormData] = useState({ empleado: '', sucursal: 'Tancol', info: '', notas: '' });
             const [records, setRecords] = useState(() => {
-                const saved = localStorage.getItem('ferre_backup');
-                return saved ? JSON.parse(saved) : [];
+                try {
+                    const saved = localStorage.getItem('ferre_backup_v6');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) { return []; }
             });
             const [activeCategory, setActiveCategory] = useState(null);
             const [confetti, setConfetti] = useState([]);
-            const [status, setStatus] = useState({ type: 'loading', msg: 'Conectando con la nube...' });
-            const [isSaving, setIsSaving] = useState(false);
+            const [status, setStatus] = useState({ type: 'loading', msg: '🔵 Buscando señal de nube...' });
+            const [errorLog, setErrorLog] = useState("");
 
             useEffect(() => {
                 try {
@@ -70,28 +66,27 @@
                             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                             setRecords(sorted);
-                            localStorage.setItem('ferre_backup', JSON.stringify(sorted));
-                            setStatus({ type: 'success', msg: 'Sistema Conectado ✅' });
+                            localStorage.setItem('ferre_backup_v6', JSON.stringify(sorted));
+                            setStatus({ type: 'success', msg: '🟢 SISTEMA CONECTADO Y SEGURO' });
                         }, (err) => {
-                            console.error(err);
-                            setStatus({ type: 'error', msg: 'Error de Reglas en Firebase ❌' });
+                            setStatus({ type: 'error', msg: '🔴 ERROR: REGLAS DE FIREBASE (Verifica reglas en consola)' });
+                            setErrorLog(err.message);
                         });
                     }).catch(err => {
-                        console.error(err);
-                        setStatus({ type: 'error', msg: 'Falta activar Autenticación Anónima ❌' });
+                        setStatus({ type: 'error', msg: '🔴 ERROR: AUTENTICACIÓN (Activa modo Anónimo)' });
+                        setErrorLog(err.message);
                     });
                 } catch (e) {
-                    setStatus({ type: 'error', msg: 'Error de Configuración General ❌' });
+                    setStatus({ type: 'error', msg: '🔴 ERROR: CONFIGURACIÓN' });
                 }
             }, []);
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
 
             const handleSave = async () => {
-                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre arriba.");
-                if (!formData.info) return alert("⚠️ Escribe qué material falta o qué sucedió.");
-                
-                setIsSaving(true);
+                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre.");
+                if (!formData.info) return alert("⚠️ Escribe qué falta o qué pasó.");
+
                 const newLog = {
                     ...formData,
                     category: activeCategory.id,
@@ -102,28 +97,21 @@
                 };
                 
                 try {
-                    // Intento guardar en la nube
                     if (db) {
                         const colRef = collection(db, 'artifacts', internalId, 'public', 'data', 'feedbacks');
                         await addDoc(colRef, newLog);
-                    } else {
-                        throw new Error("No hay base de datos conectada");
                     }
-                    
-                    lanzarExito();
+                    finalizar();
                 } catch (e) { 
-                    console.warn("Fallo nube, guardando localmente:", e);
-                    // Si falla la nube, guardamos en memoria local para no perder el reporte
+                    console.warn("Fallo nube, usando memoria local:", e);
                     const updatedLocal = [newLog, ...records];
                     setRecords(updatedLocal);
-                    localStorage.setItem('ferre_backup', JSON.stringify(updatedLocal));
-                    lanzarExito();
-                } finally {
-                    setIsSaving(false);
+                    localStorage.setItem('ferre_backup_v6', JSON.stringify(updatedLocal));
+                    finalizar();
                 }
             };
 
-            const lanzarExito = () => {
+            const finalizar = () => {
                 setConfetti(Array.from({ length: 35 }).map((_, i) => ({ id: i, x: Math.random() * 100 })));
                 setView('success');
                 setTimeout(() => { 
@@ -134,7 +122,8 @@
             };
 
             const leaderboard = useMemo(() => {
-                const counts = ['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'].reduce((acc, emp) => {
+                const emps = ['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'];
+                const counts = emps.reduce((acc, emp) => {
                     acc[emp] = records.filter(r => r.empleado === emp).length;
                     return acc;
                 }, {});
@@ -159,18 +148,17 @@
                 <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-50 overflow-hidden">
                     {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    <div className={`p-2 text-[9px] font-black uppercase text-center tracking-widest transition-all ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-500'}`}>
+                    {/* BARRA DE ESTADO OBLIGATORIA */}
+                    <div className={`p-3 text-[11px] font-black uppercase text-center tracking-tighter shadow-inner ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white animate-pulse'}`}>
                         {status.msg}
                     </div>
 
                     <header className="bg-slate-900 p-5 flex justify-between items-center text-white sticky top-0 z-50 shadow-2xl">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg">F</div>
+                            <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl">F</div>
                             <h1 className="font-black italic text-xl tracking-tighter uppercase leading-none">FerreCheck</h1>
                         </div>
-                        <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-90 border border-slate-700">
-                            <i data-lucide="bar-chart-3" className="text-yellow-400"></i>
-                        </button>
+                        <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-90"><i data-lucide="bar-chart-3" className="text-yellow-400"></i></button>
                     </header>
 
                     <main className="p-4 space-y-6 flex-1">
@@ -181,32 +169,32 @@
                                         {['Tancol', 'Insurgentes'].map(s => <button key={s} onClick={() => setFormData({...formData, sucursal: s})} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase border-2 transition-all ${formData.sucursal === s ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-50 text-slate-400 border-transparent'}`}>{s}</button>)}
                                     </div>
                                     <div className="grid grid-cols-5 gap-1.5">
-                                        {['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'].map(e => <button key={e} onClick={() => setFormData({...formData, empleado: e})} className={`relative py-5 rounded-xl text-[10px] font-black border-2 transition-all flex flex-col items-center justify-center ${formData.empleado === e ? 'bg-slate-800 text-white border-slate-800 shadow-xl scale-110 z-10' : 'bg-gray-50 text-gray-400 border-transparent'}`}>{currentLeader === e && records.length > 0 && <span className="absolute -top-4 text-xl crown-float">👑</span>}{e}</button>)}
+                                        {['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'].map(e => <button key={e} onClick={() => setFormData({...formData, empleado: e})} className={`relative py-5 rounded-xl text-[10px] font-black border-2 transition-all flex flex-col items-center justify-center ${formData.empleado === e ? 'bg-slate-800 text-white border-slate-800 shadow-xl scale-110 z-10' : 'bg-gray-50 text-gray-400 border-transparent'}`}>{currentLeader === e && records.length > 0 && <span className="absolute -top-4 text-xl">👑</span>}{e}</button>)}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-5 gap-2">
                                     {[
-                                        { id: 'perdida', t: 'Venta Perdida', c: 'bg-red-500', i: 'x-circle' },
-                                        { id: 'devol', t: 'Devolución', c: 'bg-orange-500', i: 'rotate-ccw' },
-                                        { id: 'cliente', t: 'Comentario', c: 'bg-blue-500', i: 'message-square' },
-                                        { id: 'stock', t: 'Stock / Orden', c: 'bg-emerald-500', i: 'package' },
+                                        { id: 'perdida', t: 'Pérdida', c: 'bg-red-500', i: 'x-circle' },
+                                        { id: 'devol', t: 'Devol', c: 'bg-orange-500', i: 'rotate-ccw' },
+                                        { id: 'cliente', t: 'Mensaje', c: 'bg-blue-500', i: 'message-square' },
+                                        { id: 'stock', t: 'Stock', c: 'bg-emerald-500', i: 'package' },
                                         { id: 'insumos', t: 'Insumos', c: 'bg-purple-500', i: 'package-open' }
                                     ].map(cat => (
-                                        <button key={cat.id} onClick={() => { if(!formData.empleado) return alert('Selecciona tu nombre arriba'); setActiveCategory(cat); setView('form'); }} className="flex flex-col items-center gap-2 group active:scale-90 transition-all cursor-pointer">
-                                            <div className={`${cat.c} text-white p-4 rounded-3xl shadow-lg w-full aspect-square flex items-center justify-center group-hover:-translate-y-2 transition-transform duration-300`}><i data-lucide={cat.i}></i></div>
-                                            <span className="text-[9px] font-black uppercase text-gray-500 leading-none text-center">{cat.t}</span>
+                                        <button key={cat.id} onClick={() => { if(!formData.empleado) return alert('Selecciona tu nombre'); setActiveCategory(cat); setView('form'); }} className="flex flex-col items-center gap-2 group active:scale-90 transition-all">
+                                            <div className={`${cat.c} text-white p-4 rounded-3xl shadow-lg w-full aspect-square flex items-center justify-center group-hover:-translate-y-2`}><i data-lucide={cat.i}></i></div>
+                                            <span className="text-[9px] font-black uppercase text-gray-500 text-center">{cat.t}</span>
                                         </button>
                                     ))}
                                 </div>
 
                                 <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                    <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
+                                    <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2 font-black italic"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
                                     <div className="space-y-4">
                                         {leaderboard.slice(0, 3).map((data, index) => (
                                             <div key={data[0]} className="space-y-1">
-                                                <div className="flex justify-between items-center text-xs font-black uppercase"><span>{data[0]}</span><span className="text-slate-400">{data[1]} pts</span></div>
-                                                <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} /></div>
+                                                <div className="flex justify-between items-center text-xs font-black uppercase"><span>{data[0]} {index === 0 && data[1] > 0 ? '👑' : ''}</span><span className="text-slate-400">{data[1]} pts</span></div>
+                                                <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-md' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} /></div>
                                             </div>
                                         ))}
                                     </div>
@@ -217,35 +205,33 @@
                         {view === 'form' && (
                             <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100 animate__animated animate__slideInUp">
                                 <div className={`p-8 border-b flex justify-between items-center ${activeCategory.c} bg-opacity-10`}>
-                                    <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800 tracking-tighter">{activeCategory.t}</h2></div>
+                                    <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800">{activeCategory.t}</h2></div>
                                     <button onClick={() => setView('home')}><i data-lucide="x" className="text-slate-300"></i></button>
                                 </div>
                                 <div className="p-8 space-y-6">
-                                    <div className="flex gap-2">
-                                        <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">{formData.empleado}</span>
-                                        <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">{formData.sucursal}</span>
+                                    <div className="flex gap-2 text-[10px] font-black uppercase">
+                                        <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg">{formData.empleado}</span>
+                                        <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg">{formData.sucursal}</span>
                                     </div>
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">{activeCategory.id === 'insumos' ? '¿Qué material se terminó?' : 'Detalle del Reporte'}</label>
-                                        <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all shadow-inner" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
+                                        <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 shadow-inner" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
                                     </div>
-                                    <button onClick={handleSave} disabled={isSaving} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-3 disabled:opacity-50`}>
-                                        {isSaving ? "GUARDANDO..." : <React.Fragment><i data-lucide="save"></i> GUARDAR REPORTE</React.Fragment>}
-                                    </button>
+                                    <button onClick={handleSave} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all`}>GUARDAR REPORTE</button>
                                 </div>
                             </div>
                         )}
 
                         {view === 'dash' && (
                             <div className="space-y-6 animate__animated animate__fadeIn pb-10">
-                                <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-100 shadow-sm"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
+                                <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-100"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
                                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora de Equipo</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
+                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
                                     <div className="max-h-96 overflow-y-auto no-scrollbar">
-                                        {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-bold uppercase tracking-widest">Esperando reportes...</div> : records.map(r => (
+                                        {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-bold uppercase">No hay registros hoy.</div> : records.map(r => (
                                             <div key={r.id || Math.random()} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
                                                 <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
-                                                <p className="text-base font-black text-slate-800 italic uppercase leading-none">"{r.info}"</p>
+                                                <p className="text-base font-black text-slate-800 italic uppercase">"{r.info}"</p>
                                                 <div className="flex justify-between mt-3 text-[9px] font-black uppercase"><span className="text-blue-600 font-bold">{r.sucursal}</span><span className="text-slate-400">Por: {r.empleado}</span></div>
                                             </div>
                                         ))}
@@ -254,7 +240,7 @@
                             </div>
                         )}
                     </main>
-                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v5.5 • Tampico</footer>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v6.0 • Tampico</footer>
                 </div>
             );
         }
