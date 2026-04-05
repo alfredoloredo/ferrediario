@@ -29,7 +29,7 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // ============================================================
-        // 🔑 TUS LLAVES DE CONEXIÓN (EXTRAÍDAS DE TU CAPTURA)
+        // 🔑 TUS LLAVES DE CONEXIÓN (VERIFICADAS)
         // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyBcmriLjBc_S1W86R1bucP6Jy8iAU9sv6Q",
@@ -40,9 +40,7 @@
             appId: "1:779747685492:web:bac35e4ca6c545bb8e4d21"
         };
         
-        // ID Único para tus datos en la nube
-        const internalId = "ferrecheck-tampico-final-v3";
-        // ============================================================
+        const internalId = "ferrecheck-final-v4";
 
         const { useState, useEffect, useMemo } = React;
 
@@ -50,7 +48,10 @@
             const [db, setDb] = useState(null);
             const [view, setView] = useState('home');
             const [formData, setFormData] = useState({ empleado: '', sucursal: 'Tancol', info: '', notas: '' });
-            const [records, setRecords] = useState([]);
+            const [records, setRecords] = useState(() => {
+                const saved = localStorage.getItem('ferre_backup');
+                return saved ? JSON.parse(saved) : [];
+            });
             const [activeCategory, setActiveCategory] = useState(null);
             const [confetti, setConfetti] = useState([]);
             const [status, setStatus] = useState({ type: 'loading', msg: 'Conectando con la nube...' });
@@ -67,11 +68,13 @@
                         const col = collection(firestore, 'artifacts', internalId, 'public', 'data', 'feedbacks');
                         onSnapshot(col, (snap) => {
                             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            setRecords(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                            const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                            setRecords(sorted);
+                            localStorage.setItem('ferre_backup', JSON.stringify(sorted));
                             setStatus({ type: 'success', msg: 'Sistema Conectado ✅' });
                         }, (err) => {
                             console.error(err);
-                            setStatus({ type: 'error', msg: 'Falta publicar Reglas en Firestore ❌' });
+                            setStatus({ type: 'error', msg: 'Error de Reglas en Firebase ❌' });
                         });
                     }).catch(err => {
                         console.error(err);
@@ -85,10 +88,9 @@
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
 
             const handleSave = async () => {
-                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre.");
-                if (!formData.info) return alert("⚠️ Escribe qué material falta o qué pasó.");
-                if (isSaving) return;
-
+                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre arriba.");
+                if (!formData.info) return alert("⚠️ Escribe qué material falta o qué sucedió.");
+                
                 setIsSaving(true);
                 const newLog = {
                     ...formData,
@@ -100,19 +102,35 @@
                 };
                 
                 try {
-                    await addDoc(collection(db, 'artifacts', internalId, 'public', 'data', 'feedbacks'), newLog);
-                    setConfetti(Array.from({ length: 35 }).map((_, i) => ({ id: i, x: Math.random() * 100 })));
-                    setView('success');
-                    setTimeout(() => { 
-                        setView('home'); 
-                        setConfetti([]); 
-                        setFormData({...formData, info:'', notas:''}); 
-                        setIsSaving(false);
-                    }, 3000);
+                    // Intento guardar en la nube
+                    if (db) {
+                        const colRef = collection(db, 'artifacts', internalId, 'public', 'data', 'feedbacks');
+                        await addDoc(colRef, newLog);
+                    } else {
+                        throw new Error("No hay base de datos conectada");
+                    }
+                    
+                    lanzarExito();
                 } catch (e) { 
+                    console.warn("Fallo nube, guardando localmente:", e);
+                    // Si falla la nube, guardamos en memoria local para no perder el reporte
+                    const updatedLocal = [newLog, ...records];
+                    setRecords(updatedLocal);
+                    localStorage.setItem('ferre_backup', JSON.stringify(updatedLocal));
+                    lanzarExito();
+                } finally {
                     setIsSaving(false);
-                    alert("❌ No se pudo guardar. Mira el mensaje de error en la barra roja de arriba."); 
                 }
+            };
+
+            const lanzarExito = () => {
+                setConfetti(Array.from({ length: 35 }).map((_, i) => ({ id: i, x: Math.random() * 100 })));
+                setView('success');
+                setTimeout(() => { 
+                    setView('home'); 
+                    setConfetti([]); 
+                    setFormData({...formData, info:'', notas:''}); 
+                }, 3000);
             };
 
             const leaderboard = useMemo(() => {
@@ -132,7 +150,7 @@
                             <i data-lucide="check" className="text-white w-12 h-12" strokeWidth={4}></i>
                         </div>
                         <h1 className="text-4xl font-black italic uppercase text-slate-900 leading-none">¡RECIBIDO!</h1>
-                        <p className="text-emerald-600 font-black text-xl mt-4">Guardado en la Nube</p>
+                        <p className="text-emerald-600 font-black text-xl mt-4 uppercase tracking-widest">Reporte Guardado</p>
                     </div>
                 );
             }
@@ -141,8 +159,7 @@
                 <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-50 overflow-hidden">
                     {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    {/* BARRA DE DIAGNÓSTICO PARA ALFREDO */}
-                    <div className={`p-2 text-[10px] font-black uppercase text-center tracking-widest transition-all ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-500'}`}>
+                    <div className={`p-2 text-[9px] font-black uppercase text-center tracking-widest transition-all ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-500'}`}>
                         {status.msg}
                     </div>
 
@@ -212,7 +229,7 @@
                                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">{activeCategory.id === 'insumos' ? '¿Qué material se terminó?' : 'Detalle del Reporte'}</label>
                                         <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all shadow-inner" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
                                     </div>
-                                    <button onClick={handleSave} disabled={isSaving || status.type !== 'success'} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-3 disabled:opacity-50`}>
+                                    <button onClick={handleSave} disabled={isSaving} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-3 disabled:opacity-50`}>
                                         {isSaving ? "GUARDANDO..." : <React.Fragment><i data-lucide="save"></i> GUARDAR REPORTE</React.Fragment>}
                                     </button>
                                 </div>
@@ -223,10 +240,10 @@
                             <div className="space-y-6 animate__animated animate__fadeIn pb-10">
                                 <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-100 shadow-sm"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
                                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
+                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora de Equipo</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
                                     <div className="max-h-96 overflow-y-auto no-scrollbar">
                                         {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-bold uppercase tracking-widest">Esperando reportes...</div> : records.map(r => (
-                                            <div key={r.id} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
+                                            <div key={r.id || Math.random()} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
                                                 <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
                                                 <p className="text-base font-black text-slate-800 italic uppercase leading-none">"{r.info}"</p>
                                                 <div className="flex justify-between mt-3 text-[9px] font-black uppercase"><span className="text-blue-600 font-bold">{r.sucursal}</span><span className="text-slate-400">Por: {r.empleado}</span></div>
@@ -237,7 +254,7 @@
                             </div>
                         )}
                     </main>
-                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v5.2 • Tampico</footer>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v5.5 • Tampico</footer>
                 </div>
             );
         }
