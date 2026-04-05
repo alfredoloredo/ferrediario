@@ -3,23 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FerreCheck - Sistema Oficial</title>
+    <title>FerreCheck - V.8.0</title>
+    <!-- Librerías de diseño y lógica -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
     <style>
-        @keyframes fall { 0% { transform: translateY(-50px) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+        @keyframes fall { 
+            0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
         .confetti { position: fixed; z-index: 100; pointer-events: none; animation: fall 3s linear forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        body { -webkit-tap-highlight-color: transparent; }
-        .sticky-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
-        .content-wrapper { margin-top: 45px; }
+        
+        /* BANNER AGRESIVO PARA VERIFICACIÓN */
+        .ultra-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            text-align: center;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .main-content {
+            margin-top: 50px;
+        }
+        body { -webkit-tap-highlight-color: transparent; background-color: #f1f5f9; }
     </style>
 </head>
-<body class="bg-slate-100 font-sans">
+<body>
     <div id="root"></div>
 
     <script type="module">
@@ -27,6 +47,9 @@
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+        // ============================================================
+        // 🔑 CONFIGURACIÓN DE ALFREDO (EXTRAÍDA DE FOTOS)
+        // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyBcmriLjBc_S1W86R1bucP6Jy8iAU9sv6Q",
             authDomain: "ferrecheck-tampico.firebaseapp.com",
@@ -36,7 +59,8 @@
             appId: "1:779747685492:web:bac35e4ca6c545bb8e4d21"
         };
         
-        const internalId = "ferre-tampico-final-v7-fix";
+        const internalId = "ferre-tampico-final-v8";
+        // ============================================================
 
         const { useState, useEffect, useMemo } = React;
 
@@ -44,17 +68,13 @@
             const [db, setDb] = useState(null);
             const [view, setView] = useState('home');
             const [formData, setFormData] = useState({ empleado: '', sucursal: 'Tancol', info: '', notas: '' });
-            const [records, setRecords] = useState(() => {
-                try {
-                    const saved = localStorage.getItem('ferre_backup_v7');
-                    return saved ? JSON.parse(saved) : [];
-                } catch (e) { return []; }
-            });
+            const [records, setRecords] = useState([]);
             const [activeCategory, setActiveCategory] = useState(null);
             const [confetti, setConfetti] = useState([]);
-            const [status, setStatus] = useState({ type: 'loading', msg: '🔵 CONECTANDO A LA NUBE...' });
+            const [status, setStatus] = useState({ type: 'loading', msg: '🔵 V.8.0 - CONECTANDO A LA NUBE...' });
 
             useEffect(() => {
+                console.log("App V.8.0 Iniciada");
                 try {
                     const app = initializeApp(firebaseConfig);
                     const firestore = getFirestore(app);
@@ -67,16 +87,15 @@
                             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                             setRecords(sorted);
-                            localStorage.setItem('ferre_backup_v7', JSON.stringify(sorted));
-                            setStatus({ type: 'success', msg: '🟢 SISTEMA ONLINE - LISTO PARA GUARDAR' });
+                            setStatus({ type: 'success', msg: '🟢 V.8.0 - SISTEMA ONLINE (LISTO)' });
                         }, (err) => {
-                            setStatus({ type: 'error', msg: '🔴 ERROR: VERIFICA REGLAS FIRESTORE' });
+                            setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR: REGLAS FIRESTORE' });
                         });
                     }).catch(err => {
-                        setStatus({ type: 'error', msg: '🔴 ERROR: ACTIVA MODO ANÓNIMO' });
+                        setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR: ACTIVA MODO ANÓNIMO' });
                     });
                 } catch (e) {
-                    setStatus({ type: 'error', msg: '🔴 ERROR DE CONFIGURACIÓN' });
+                    setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR DE CONFIGURACIÓN' });
                 }
             }, []);
 
@@ -102,9 +121,10 @@
                     }
                     finalizar();
                 } catch (e) { 
-                    const updatedLocal = [newLog, ...records];
-                    setRecords(updatedLocal);
-                    localStorage.setItem('ferre_backup_v7', JSON.stringify(updatedLocal));
+                    // Backup local si falla
+                    const saved = localStorage.getItem('ferre_backup');
+                    const localData = saved ? JSON.parse(saved) : [];
+                    localStorage.setItem('ferre_backup', JSON.stringify([newLog, ...localData]));
                     finalizar();
                 }
             };
@@ -143,21 +163,23 @@
             }
 
             return (
-                <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-50 overflow-hidden">
+                <div className="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden">
                     {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    {/* BANNER GIGANTE FIJO */}
-                    <div className={`sticky-banner p-3 text-[10px] font-black uppercase text-center tracking-widest shadow-xl transition-all ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white animate-pulse'}`}>
+                    {/* BANNER DE ESTADO V.8.0 */}
+                    <div className={`ultra-banner text-[10px] tracking-widest ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white animate-pulse'}`}>
                         {status.msg}
                     </div>
 
-                    <div className="content-wrapper flex flex-col flex-1">
+                    <div className="main-content flex flex-col flex-1 pb-10">
                         <header className="bg-slate-900 p-5 flex justify-between items-center text-white shadow-2xl">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl">F</div>
+                                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg font-black italic">F</div>
                                 <h1 className="font-black italic text-xl tracking-tighter uppercase leading-none">FerreCheck</h1>
                             </div>
-                            <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-90"><i data-lucide="bar-chart-3" className="text-yellow-400"></i></button>
+                            <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-95 border border-slate-700">
+                                <i data-lucide="bar-chart-3" className="text-yellow-400"></i>
+                            </button>
                         </header>
 
                         <main className="p-4 space-y-6 flex-1">
@@ -176,24 +198,24 @@
                                         {[
                                             { id: 'perdida', t: 'Pérdida', c: 'bg-red-500', i: 'x-circle' },
                                             { id: 'devol', t: 'Devol', c: 'bg-orange-500', i: 'rotate-ccw' },
-                                            { id: 'cliente', t: 'Mensaje', c: 'bg-blue-500', i: 'message-square' },
+                                            { id: 'cliente', t: 'Nota', c: 'bg-blue-500', i: 'message-square' },
                                             { id: 'stock', t: 'Stock', c: 'bg-emerald-500', i: 'package' },
-                                            { id: 'insumos', t: 'Insumos', c: 'bg-purple-500', i: 'package-open' }
+                                            { id: 'insumos', t: 'Insumo', c: 'bg-purple-500', i: 'package-open' }
                                         ].map(cat => (
                                             <button key={cat.id} onClick={() => { if(!formData.empleado) return alert('Selecciona tu nombre'); setActiveCategory(cat); setView('form'); }} className="flex flex-col items-center gap-2 group active:scale-90 transition-all">
-                                                <div className={`${cat.c} text-white p-4 rounded-3xl shadow-lg w-full aspect-square flex items-center justify-center group-hover:-translate-y-2`}><i data-lucide={cat.i}></i></div>
-                                                <span className="text-[9px] font-black uppercase text-gray-500 text-center">{cat.t}</span>
+                                                <div className={`${cat.c} text-white p-4 rounded-3xl shadow-lg w-full aspect-square flex items-center justify-center group-hover:-translate-y-1 transition-transform`}><i data-lucide={cat.i}></i></div>
+                                                <span className="text-[9px] font-black uppercase text-gray-500 text-center leading-none tracking-tighter">{cat.t}</span>
                                             </button>
                                         ))}
                                     </div>
 
                                     <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
+                                        <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2 font-black italic tracking-widest"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
                                         <div className="space-y-4">
                                             {leaderboard.slice(0, 3).map((data, index) => (
                                                 <div key={data[0]} className="space-y-1">
                                                     <div className="flex justify-between items-center text-xs font-black uppercase"><span>{data[0]} {index === 0 && data[1] > 0 ? '👑' : ''}</span><span className="text-slate-400">{data[1]} pts</span></div>
-                                                    <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-md' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} /></div>
+                                                    <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-sm' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} /></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -204,34 +226,34 @@
                             {view === 'form' && (
                                 <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100 animate__animated animate__slideInUp">
                                     <div className={`p-8 border-b flex justify-between items-center ${activeCategory.c} bg-opacity-10`}>
-                                        <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800">{activeCategory.t}</h2></div>
-                                        <button onClick={() => setView('home')}><i data-lucide="x" className="text-slate-300"></i></button>
+                                        <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800 tracking-tighter">{activeCategory.t}</h2></div>
+                                        <button onClick={() => setView('home')} className="p-2 bg-white/50 rounded-full"><i data-lucide="x" className="text-slate-400"></i></button>
                                     </div>
                                     <div className="p-8 space-y-6">
-                                        <div className="flex gap-2 text-[10px] font-black uppercase">
-                                            <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg">{formData.empleado}</span>
-                                            <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg">{formData.sucursal}</span>
+                                        <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest">
+                                            <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-sm">{formData.empleado}</span>
+                                            <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-sm">{formData.sucursal}</span>
                                         </div>
                                         <div className="space-y-4">
                                             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">{activeCategory.id === 'insumos' ? '¿Qué material se terminó?' : 'Detalle del Reporte'}</label>
-                                            <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 shadow-inner" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
+                                            <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 shadow-inner transition-all" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSave} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all`}>GUARDAR REPORTE</button>
+                                        <button onClick={handleSave} className={`${activeCategory.c} w-full text-white p-6 rounded-[2rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110`}>GUARDAR REPORTE</button>
                                     </div>
                                 </div>
                             )}
 
                             {view === 'dash' && (
                                 <div className="space-y-6 animate__animated animate__fadeIn pb-10">
-                                    <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-100"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
+                                    <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-200 shadow-sm"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
                                     <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                        <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora Central</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
+                                        <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50 tracking-widest"><span>Bitácora Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px] font-black">{records.length} TOTAL</span></div>
                                         <div className="max-h-96 overflow-y-auto no-scrollbar">
-                                            {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-bold uppercase">No hay registros hoy.</div> : records.map(r => (
+                                            {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-black uppercase tracking-widest">Esperando reportes...</div> : records.map(r => (
                                                 <div key={r.id || Math.random()} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
-                                                    <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
-                                                    <p className="text-base font-black text-slate-800 italic uppercase">"{r.info}"</p>
-                                                    <div className="flex justify-between mt-3 text-[9px] font-black uppercase"><span className="text-blue-600 font-bold">{r.sucursal}</span><span className="text-slate-400">Por: {r.empleado}</span></div>
+                                                    <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600 tracking-tighter`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
+                                                    <p className="text-base font-black text-slate-800 italic uppercase leading-none tracking-tight">"{r.info}"</p>
+                                                    <div className="flex justify-between mt-3 text-[9px] font-black uppercase tracking-tighter"><span className="text-blue-600 font-black">{r.sucursal}</span><span className="text-slate-400">Por: {r.empleado}</span></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -240,7 +262,7 @@
                             )}
                         </main>
                     </div>
-                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v7.0 • Tampico</footer>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v8.0 • Tampico</footer>
                 </div>
             );
         }
