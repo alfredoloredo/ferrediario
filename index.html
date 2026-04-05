@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Feedback Diario - Pro</title>
-    <!-- Bibliotecas de alto rendimiento -->
+    <title>FerreCheck - Tampico</title>
+    <!-- Librerías de diseño y lógica -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,139 +29,89 @@
 <body class="bg-slate-50 font-sans">
     <div id="root"></div>
 
-    <!-- Firebase App & Firestore (v10) -->
+    <!-- Firebase App & Firestore -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // CONFIGURACIÓN DINÁMICA: Usa el entorno si existe, de lo contrario pide llaves
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : { apiKey: "REEMPLAZAR_CON_TU_KEY", projectId: "REEMPLAZAR" };
-            
-        const GEMINI_API_KEY = typeof apiKey !== 'undefined' ? apiKey : "";
-        const internalAppId = typeof __app_id !== 'undefined' ? __app_id : "ferrecheck-tampico-v3";
+        // ==========================================
+        // 🔑 CONFIGURACIÓN DE TU NUBE (DATOS DE ALFREDO)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcmriLjBc_S1W86R1bucP6Jy8iAU9sv6Q",
+            authDomain: "ferrecheck-tampico.firebaseapp.com",
+            projectId: "ferrecheck-tampico",
+            storageBucket: "ferrecheck-tampico.firebasestorage.app",
+            messagingSenderId: "779747685492",
+            appId: "1:779747685492:web:bac35e4ca6c545bb8e4d21"
+        };
+        const GEMINI_API_KEY = ""; // Pega aquí tu llave de Gemini cuando la tengas
+        const internalId = "ferrecheck-v4-oficial";
+        // ==========================================
 
         const { useState, useEffect, useMemo } = React;
 
         function App() {
-            const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
             const [view, setView] = useState('home');
-            const [formData, setFormData] = useState({ empleado: '', sucursal: 'Tancol', sentimiento: '', tipo: '', info: '', notas: '', nombreCliente: '', ocupacion: '' });
+            const [formData, setFormData] = useState({ empleado: '', sucursal: 'Tancol', info: '', notas: '', sentimiento: '' });
             const [activeCategory, setActiveCategory] = useState(null);
             const [records, setRecords] = useState([]);
             const [confetti, setConfetti] = useState([]);
-            const [aiReport, setAiReport] = useState("");
-            const [isAiLoading, setIsAiLoading] = useState(false);
             const [aiTip, setAiTip] = useState("");
 
             const empleados = ['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'];
             const sucursales = ['Tancol', 'Insurgentes'];
             const categorias = [
-                { id: 'perdida', t: 'Pérdida', c: 'bg-red-500', i: 'x-circle', light: 'bg-red-50' },
+                { id: 'perdida', t: 'Venta Perdida', c: 'bg-red-500', i: 'x-circle', light: 'bg-red-50' },
                 { id: 'devol', t: 'Devolución', c: 'bg-orange-500', i: 'rotate-ccw', light: 'bg-orange-50' },
-                { id: 'cliente', t: 'Cliente', c: 'bg-blue-500', i: 'message-square', light: 'bg-blue-50' },
-                { id: 'stock', t: 'Stock', c: 'bg-emerald-500', i: 'package', light: 'bg-emerald-50' },
+                { id: 'cliente', t: 'Comentario', c: 'bg-blue-500', i: 'message-square', light: 'bg-blue-50' },
+                { id: 'stock', t: 'Stock / Orden', c: 'bg-emerald-500', i: 'package', light: 'bg-emerald-50' },
                 { id: 'insumos', t: 'Insumos', c: 'bg-purple-500', i: 'package-open', light: 'bg-purple-50' }
             ];
 
-            // --- REGLA 3: AUTENTICACIÓN ANTES DE OPERACIONES ---
+            // Iniciar Nube
             useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        const app = initializeApp(firebaseConfig);
-                        const authInstance = getAuth(app);
-                        const firestore = getFirestore(app);
-                        setDb(firestore);
-
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(authInstance, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(authInstance);
-                        }
-                        
-                        setUser(authInstance.currentUser);
-                    } catch (error) {
-                        console.error("Error Auth:", error);
-                    }
-                };
-                initAuth();
+                const app = initializeApp(firebaseConfig);
+                const firestore = getFirestore(app);
+                const auth = getAuth(app);
+                setDb(firestore);
+                signInAnonymously(auth).then(() => {
+                    const col = collection(firestore, 'artifacts', internalId, 'public', 'data', 'feedbacks');
+                    onSnapshot(col, (snap) => {
+                        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setRecords(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                    });
+                });
             }, []);
-
-            // --- CARGA DE DATOS ---
-            useEffect(() => {
-                if (!user || !db) return;
-                const feedbackCol = collection(db, 'artifacts', internalAppId, 'public', 'data', 'feedbacks');
-                const unsubscribe = onSnapshot(feedbackCol, (snapshot) => {
-                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setRecords(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-                }, (err) => console.error("Error Snapshot:", err));
-                return () => unsubscribe();
-            }, [user, db]);
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
 
-            // --- IA: GEMINI ---
-            const callGemini = async (prompt) => {
-                const key = GEMINI_API_KEY || "";
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const json = await res.json();
-                return json.candidates?.[0]?.content?.parts?.[0]?.text;
-            };
-
-            const generateReport = async () => {
-                setIsAiLoading(true);
-                const context = records.slice(0, 15).map(r => `${r.cat}: ${r.info}`).join(", ");
-                const prompt = `Analiza estos registros de ferretería en Tampico: ${context}. Dame 3 puntos clave estratégicos sobre qué falta o qué mejorar. Se breve.`;
-                try {
-                    const resp = await callGemini(prompt);
-                    setAiReport(resp);
-                } catch (e) { setAiReport("Error de conexión con IA."); }
-                setIsAiLoading(false);
-            };
-
-            const getAiTip = async () => {
-                if (!formData.info) return;
-                const prompt = `Consejo técnico de 1 frase para: ${formData.info}. Considerando clima de Tampico.`;
-                try {
-                    const resp = await callGemini(prompt);
-                    setAiTip(resp);
-                } catch (e) {}
-            };
-
-            // --- ACCIÓN: GUARDAR ---
             const handleSave = async () => {
-                if (!user || !db) return alert("Esperando conexión segura...");
-                if (!formData.info && activeCategory.id !== 'cliente') return alert("Por favor indica qué sucedió o qué falta.");
-                
+                if (!formData.empleado) return alert("Selecciona tu nombre.");
+                if (!formData.info) return alert("Escribe qué pasó.");
+
                 const newLog = {
                     ...formData,
                     category: activeCategory.id,
                     cat: activeCategory.t,
                     color: activeCategory.c,
                     createdAt: new Date().toISOString(),
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    userId: user.uid
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 };
                 
                 try {
-                    await addDoc(collection(db, 'artifacts', internalAppId, 'public', 'data', 'feedbacks'), newLog);
-                    setConfetti(Array.from({ length: 35 }).map((_, i) => ({ id: i, x: Math.random() * 100, c: ['#facc15', '#3b82f6', '#ef4444'][i%3] })));
+                    await addDoc(collection(db, 'artifacts', internalId, 'public', 'data', 'feedbacks'), newLog);
+                    setConfetti(Array.from({ length: 30 }).map((_, i) => ({ id: i, x: Math.random() * 100 })));
                     setView('success');
-                    setTimeout(() => {
-                        setView('home');
-                        setConfetti([]);
-                        setFormData(prev => ({...prev, info: '', notas: '', sentimiento: '', nombreCliente: '', ocupacion: ''}));
+                    setTimeout(() => { 
+                        setView('home'); 
+                        setConfetti([]); 
+                        setFormData({...formData, info:'', notas:'', sentimiento:''}); 
                         setAiTip("");
-                    }, 3500);
-                } catch (e) { console.error("Error save:", e); }
+                    }, 3000);
+                } catch (e) { alert("¡Error! ¿Activaste 'Modo Prueba' en Firestore?"); }
             };
 
             const leaderboard = useMemo(() => {
@@ -178,23 +128,22 @@
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-10 text-center animate__animated animate__fadeIn">
                         <div className="w-24 h-24 bg-emerald-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl animate__animated animate__bounceIn">
-                            <i data-lucide="check-circle-2" className="text-white w-12 h-12"></i>
+                            <i data-lucide="check" className="text-white w-12 h-12"></i>
                         </div>
-                        <h1 className="text-4xl font-black italic uppercase text-slate-900 leading-none tracking-tighter">¡GRACIAS {formData.empleado}!</h1>
-                        <p className="text-emerald-600 font-black text-xl mt-4">Punto registrado en la nube</p>
-                        <div className="mt-8 bg-slate-50 p-6 rounded-[2rem] border border-slate-100"><span className="text-xs font-black text-slate-700 uppercase tracking-widest">+1 Punto Equipo</span></div>
+                        <h1 className="text-4xl font-black italic uppercase text-slate-900 leading-none">¡GRACIAS!</h1>
+                        <p className="text-emerald-600 font-black text-xl mt-4 uppercase">Guardado en la Nube</p>
                     </div>
                 );
             }
 
             return (
                 <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-50 overflow-hidden">
-                    {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 rounded-full" style={{left: p.x + '%', backgroundColor: p.c}} />)}
+                    {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    <header className="bg-slate-900 p-5 flex justify-between items-center text-white sticky top-0 z-50 shadow-2xl">
+                    <header className="bg-slate-900 p-5 flex justify-between items-center text-white sticky top-0 z-50 shadow-xl">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg">F</div>
-                            <h1 className="font-black italic text-xl tracking-tighter uppercase">Feedback Diario</h1>
+                            <h1 className="font-black italic text-xl tracking-tighter uppercase leading-none">FerreCheck</h1>
                         </div>
                         <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-90 border border-slate-700">
                             <i data-lucide="bar-chart-3" className="text-yellow-400"></i>
@@ -206,23 +155,16 @@
                             <div className="space-y-6 animate__animated animate__fadeIn">
                                 <div className="bg-white p-5 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-5">
                                     <div className="flex gap-2">
-                                        {sucursales.map(s => (
-                                            <button key={s} onClick={() => setFormData({...formData, sucursal: s})} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase border-2 transition-all ${formData.sucursal === s ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-50 text-slate-400 border-transparent'}`}>{s}</button>
-                                        ))}
+                                        {sucursales.map(s => <button key={s} onClick={() => setFormData({...formData, sucursal: s})} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase border-2 transition-all ${formData.sucursal === s ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-50 text-slate-400 border-transparent'}`}>{s}</button>)}
                                     </div>
                                     <div className="grid grid-cols-5 gap-1.5">
-                                        {empleados.map(e => (
-                                            <button key={e} onClick={() => setFormData({...formData, empleado: e})} className={`relative py-5 rounded-xl text-[10px] font-black border-2 transition-all flex flex-col items-center justify-center ${formData.empleado === e ? 'bg-slate-800 text-white border-slate-800 shadow-xl scale-110 z-10' : 'bg-gray-50 text-gray-400 border-transparent'}`}>
-                                                {currentLeader === e && records.length > 0 && <span className="absolute -top-4 text-xl crown-float">👑</span>}
-                                                {e}
-                                            </button>
-                                        ))}
+                                        {empleados.map(e => <button key={e} onClick={() => setFormData({...formData, empleado: e})} className={`relative py-5 rounded-xl text-[10px] font-black border-2 transition-all flex flex-col items-center justify-center ${formData.empleado === e ? 'bg-slate-800 text-white border-slate-800 shadow-xl scale-110 z-10' : 'bg-gray-50 text-gray-400 border-transparent'}`}>{currentLeader === e && records.length > 0 && <span className="absolute -top-4 text-xl crown-float">👑</span>}{e}</button>)}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-5 gap-2">
                                     {categorias.map(cat => (
-                                        <button key={cat.id} onClick={() => { if(!formData.empleado) return alert('Selecciona equipo'); setActiveCategory(cat); setView('form'); }} className="flex flex-col items-center gap-2 group active:scale-90 transition-all">
+                                        <button key={cat.id} onClick={() => { if(!formData.empleado) return alert('Selecciona tu nombre'); setActiveCategory(cat); setView('form'); }} className="flex flex-col items-center gap-2 group active:scale-90 transition-all cursor-pointer">
                                             <div className={`${cat.c} text-white p-4 rounded-3xl shadow-lg w-full aspect-square flex items-center justify-center group-hover:-translate-y-2 transition-transform duration-300`}>
                                                 <i data-lucide={cat.i} className="w-6 h-6"></i>
                                             </div>
@@ -232,17 +174,12 @@
                                 </div>
 
                                 <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                    <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 mb-4"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
+                                    <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
                                     <div className="space-y-4">
                                         {leaderboard.slice(0, 3).map((data, index) => (
                                             <div key={data[0]} className="space-y-1">
-                                                <div className="flex justify-between items-center text-xs font-black uppercase">
-                                                    <span>{data[0]} {index === 0 && data[1] > 0 ? '👑' : ''}</span>
-                                                    <span className="text-slate-400">{data[1]} pts</span>
-                                                </div>
-                                                <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
-                                                    <div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} />
-                                                </div>
+                                                <div className="flex justify-between items-center text-xs font-black uppercase"><span>{data[0]} {index === 0 && data[1] > 0 ? '👑' : ''}</span><span className="text-slate-400">{data[1]} pts</span></div>
+                                                <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${index === 0 ? 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-slate-300'}`} style={{ width: `${(data[1] / (leaderboard[0][1] || 1)) * 100}%` }} /></div>
                                             </div>
                                         ))}
                                     </div>
@@ -253,42 +190,31 @@
                         {view === 'form' && (
                             <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 animate__animated animate__slideInUp">
                                 <div className={`p-8 border-b flex justify-between items-center ${activeCategory.light}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div>
-                                        <h2 className="font-black text-2xl uppercase italic text-slate-800">{activeCategory.t}</h2>
-                                    </div>
+                                    <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800 tracking-tighter">{activeCategory.t}</h2></div>
                                     <button onClick={() => setView('home')}><i data-lucide="x" className="text-slate-300"></i></button>
                                 </div>
-
                                 <div className="p-8 space-y-6">
-                                    {activeCategory.id === 'cliente' && (
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button onClick={()=>setFormData({...formData, sentimiento:'Positivo'})} className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black uppercase text-xs ${formData.sentimiento === 'Positivo' ? 'bg-emerald-500 text-white border-emerald-500' : 'text-emerald-500 border-emerald-100'}`}><i data-lucide="thumbs-up"></i> Bien</button>
-                                                <button onClick={()=>setFormData({...formData, sentimiento:'Negativo'})} className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black uppercase text-xs ${formData.sentimiento === 'Negativo' ? 'bg-red-500 text-white border-red-500' : 'text-red-500 border-red-100'}`}><i data-lucide="thumbs-down"></i> Queja</button>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <input type="text" placeholder="Nombre Clt..." className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none" onChange={e=>setFormData({...formData, nombreCliente: e.target.value})} />
-                                                <input type="text" placeholder="Oficio..." className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none" onChange={e=>setFormData({...formData, ocupacion: e.target.value})} />
-                                            </div>
-                                        </div>
-                                    )}
-
+                                    <div className="flex gap-2">
+                                        <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">{formData.empleado}</span>
+                                        <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">{formData.sucursal}</span>
+                                    </div>
+                                    
                                     <div className="space-y-4">
-                                        {activeCategory.id === 'insumos' ? (
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">¿Qué insumo se terminó?</label>
-                                                <input type="text" placeholder="Ej. Bolsas, Cinta, Papel..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-purple-500 transition-all shadow-inner" onChange={e => setFormData({...formData, info: e.target.value})} />
-                                            </div>
-                                        ) : (
-                                            <React.Fragment>
-                                                <div className="relative">
-                                                    <input type="text" placeholder="¿Qué sucedió?..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all shadow-inner" onChange={e => setFormData({...formData, info: e.target.value})} />
-                                                    {activeCategory.id === 'cliente' && <button onClick={getAiTip} className="absolute right-4 top-1/2 -translate-y-1/2 bg-ai-gradient text-white p-2 rounded-full shadow-lg"><i data-lucide="brain-circuit" size={16}></i></button>}
-                                                </div>
-                                                {aiTip && <p className="text-[10px] font-bold text-indigo-600 p-2 italic animate__animated animate__fadeIn">IA: "{aiTip}"</p>}
-                                                <textarea placeholder="Notas extra..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-medium text-sm h-32 outline-none" onChange={e => setFormData({...formData, notas: e.target.value})}></textarea>
-                                            </React.Fragment>
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">
+                                            {activeCategory.id === 'insumos' ? '¿Qué material se terminó?' : 'Detalle del Reporte'}
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Escribe aquí..." 
+                                            className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all shadow-inner" 
+                                            onChange={e => setFormData({...formData, info: e.target.value})} 
+                                        />
+                                        {activeCategory.id !== 'insumos' && (
+                                            <textarea 
+                                                placeholder="Notas adicionales..." 
+                                                className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-medium text-sm h-32 outline-none focus:border-blue-500" 
+                                                onChange={e => setFormData({...formData, notas: e.target.value})}
+                                            ></textarea>
                                         )}
                                     </div>
                                     <button onClick={handleSave} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all`}>GUARDAR REPORTE</button>
@@ -297,33 +223,16 @@
                         )}
 
                         {view === 'dash' && (
-                            <div className="space-y-6 animate__animated animate__fadeIn">
+                            <div className="space-y-6 animate__animated animate__fadeIn pb-10">
                                 <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-100 shadow-sm"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
-                                <div className="bg-ai-gradient p-7 rounded-[2.5rem] text-white shadow-2xl relative">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-black uppercase text-sm tracking-widest flex items-center gap-2"><i data-lucide="sparkles"></i> Análisis IA</h3>
-                                        <button onClick={generateReport} disabled={isAiLoading} className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg">{isAiLoading ? "..." : "Analizar"}</button>
-                                    </div>
-                                    {aiReport ? <p className="text-[11px] font-medium bg-white/10 p-4 rounded-2xl border border-white/20 whitespace-pre-wrap">{aiReport}</p> : <p className="text-xs opacity-80 italic">Usa Gemini para analizar tendencias de hoy.</p>}
-                                </div>
-
-                                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
-                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50">
-                                        <span>Bitácora Nube</span>
-                                        <span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span>
-                                    </div>
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50"><span>Bitácora Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px]">{records.length} TOTAL</span></div>
                                     <div className="max-h-96 overflow-y-auto no-scrollbar">
-                                        {records.map(r => (
+                                        {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm">No hay registros hoy.</div> : records.map(r => (
                                             <div key={r.id} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${r.sentimiento === 'Negativo' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>{r.cat}</span>
-                                                    <span className="text-[10px] font-bold text-gray-300">{r.time}</span>
-                                                </div>
-                                                <p className="text-base font-black text-slate-800 italic uppercase">"{r.info}"</p>
-                                                <div className="flex justify-between mt-3 text-[9px] font-black uppercase">
-                                                    <span className="text-blue-600">{r.sucursal}</span>
-                                                    <span className="text-slate-400">Por: {r.empleado}</span>
-                                                </div>
+                                                <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
+                                                <p className="text-base font-black text-slate-800 italic uppercase leading-none">"{r.info}"</p>
+                                                <div className="flex justify-between mt-3 text-[9px] font-black uppercase"><span className="text-blue-600 font-bold">{r.sucursal}</span><span className="text-slate-400">Por: {r.empleado}</span></div>
                                             </div>
                                         ))}
                                     </div>
@@ -331,6 +240,7 @@
                             </div>
                         )}
                     </main>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v3.1 • Tampico</footer>
                 </div>
             );
         }
