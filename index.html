@@ -41,7 +41,7 @@
         };
         
         // ID Único para tus datos en la nube
-        const internalId = "ferrecheck-tampico-oficial-v1";
+        const internalId = "ferrecheck-tampico-final-v3";
         // ============================================================
 
         const { useState, useEffect, useMemo } = React;
@@ -53,7 +53,7 @@
             const [records, setRecords] = useState([]);
             const [activeCategory, setActiveCategory] = useState(null);
             const [confetti, setConfetti] = useState([]);
-            const [status, setStatus] = useState({ type: 'loading', msg: 'Conectando...' });
+            const [status, setStatus] = useState({ type: 'loading', msg: 'Conectando con la nube...' });
             const [isSaving, setIsSaving] = useState(false);
 
             useEffect(() => {
@@ -68,25 +68,25 @@
                         onSnapshot(col, (snap) => {
                             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             setRecords(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-                            setStatus({ type: 'success', msg: 'Nube Conectada ✅' });
+                            setStatus({ type: 'success', msg: 'Sistema Conectado ✅' });
                         }, (err) => {
                             console.error(err);
-                            setStatus({ type: 'error', msg: 'Error de Reglas (Firestore) ❌' });
+                            setStatus({ type: 'error', msg: 'Falta publicar Reglas en Firestore ❌' });
                         });
                     }).catch(err => {
                         console.error(err);
-                        setStatus({ type: 'error', msg: 'Error de Permiso (Auth) ❌' });
+                        setStatus({ type: 'error', msg: 'Falta activar Autenticación Anónima ❌' });
                     });
                 } catch (e) {
-                    setStatus({ type: 'error', msg: 'Error de Configuración ❌' });
+                    setStatus({ type: 'error', msg: 'Error de Configuración General ❌' });
                 }
             }, []);
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
 
             const handleSave = async () => {
-                if (!formData.empleado) return alert("⚠️ Selecciona quién eres.");
-                if (!formData.info) return alert("⚠️ Escribe qué pasó o qué falta.");
+                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre.");
+                if (!formData.info) return alert("⚠️ Escribe qué material falta o qué pasó.");
                 if (isSaving) return;
 
                 setIsSaving(true);
@@ -111,7 +111,7 @@
                     }, 3000);
                 } catch (e) { 
                     setIsSaving(false);
-                    alert("❌ No se pudo guardar. Revisa que tu internet funcione y que Firebase esté en 'Modo Prueba'."); 
+                    alert("❌ No se pudo guardar. Mira el mensaje de error en la barra roja de arriba."); 
                 }
             };
 
@@ -141,8 +141,8 @@
                 <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-50 overflow-hidden">
                     {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    {/* BARRA DE ESTADO PARA ALFREDO */}
-                    <div className={`p-2 text-[10px] font-black uppercase text-center tracking-widest ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-200 text-slate-500'}`}>
+                    {/* BARRA DE DIAGNÓSTICO PARA ALFREDO */}
+                    <div className={`p-2 text-[10px] font-black uppercase text-center tracking-widest transition-all ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-200 text-slate-500'}`}>
                         {status.msg}
                     </div>
 
@@ -198,21 +198,21 @@
                         )}
 
                         {view === 'form' && (
-                            <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 animate__animated animate__slideInUp">
+                            <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100 animate__animated animate__slideInUp">
                                 <div className={`p-8 border-b flex justify-between items-center ${activeCategory.c} bg-opacity-10`}>
                                     <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800 tracking-tighter">{activeCategory.t}</h2></div>
                                     <button onClick={() => setView('home')}><i data-lucide="x" className="text-slate-300"></i></button>
                                 </div>
                                 <div className="p-8 space-y-6">
                                     <div className="flex gap-2">
-                                        <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">{formData.empleado}</span>
-                                        <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">{formData.sucursal}</span>
+                                        <span className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">{formData.empleado}</span>
+                                        <span className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">{formData.sucursal}</span>
                                     </div>
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block ml-1">{activeCategory.id === 'insumos' ? '¿Qué material se terminó?' : 'Detalle del Reporte'}</label>
                                         <input type="text" placeholder="Escribe aquí..." className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all shadow-inner" value={formData.info} onChange={e => setFormData({...formData, info: e.target.value})} />
                                     </div>
-                                    <button onClick={handleSave} disabled={isSaving} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-3`}>
+                                    <button onClick={handleSave} disabled={isSaving || status.type !== 'success'} className={`${activeCategory.c} w-full text-white p-6 rounded-[1.5rem] font-black text-xl uppercase shadow-2xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-3 disabled:opacity-50`}>
                                         {isSaving ? "GUARDANDO..." : <React.Fragment><i data-lucide="save"></i> GUARDAR REPORTE</React.Fragment>}
                                     </button>
                                 </div>
@@ -237,7 +237,7 @@
                             </div>
                         )}
                     </main>
-                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v5.1 • Tampico</footer>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v5.2 • Tampico</footer>
                 </div>
             );
         }
