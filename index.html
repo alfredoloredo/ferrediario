@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FerreCheck - V.8.0</title>
+    <title>FerreCheck - V.9.0 Oficial</title>
     <!-- Librerías de diseño y lógica -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -20,7 +20,7 @@
         .confetti { position: fixed; z-index: 100; pointer-events: none; animation: fall 3s linear forwards; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* BANNER AGRESIVO PARA VERIFICACIÓN */
+        /* BANNER GIGANTE PARA ALFREDO */
         .ultra-banner {
             position: fixed;
             top: 0;
@@ -30,19 +30,30 @@
             text-align: center;
             font-weight: 900;
             text-transform: uppercase;
-            padding: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-size: 12px;
         }
         .main-content {
-            margin-top: 50px;
+            margin-top: 60px;
         }
-        body { -webkit-tap-highlight-color: transparent; background-color: #f1f5f9; }
+        body { -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
+        .btn-hover:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <!-- Si ves este mensaje en pantalla, es que el código cargó pero React falló -->
+    <div id="root">
+        <div style="display: flex; height: 100vh; align-items: center; justify-content: center; font-family: sans-serif; text-align: center; padding: 20px;">
+            <div>
+                <h1 style="color: #475569;">Cargando FerreCheck V.9.0...</h1>
+                <p style="color: #94a3b8;">Si este mensaje no desaparece, recarga la página.</p>
+            </div>
+        </div>
+    </div>
 
-    <script type="module">
+    <!-- NOTA TÉCNICA: Se cambió a text/babel para que el navegador entienda el código -->
+    <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -59,8 +70,7 @@
             appId: "1:779747685492:web:bac35e4ca6c545bb8e4d21"
         };
         
-        const internalId = "ferre-tampico-final-v8";
-        // ============================================================
+        const internalId = "ferre-tampico-final-v9";
 
         const { useState, useEffect, useMemo } = React;
 
@@ -71,10 +81,9 @@
             const [records, setRecords] = useState([]);
             const [activeCategory, setActiveCategory] = useState(null);
             const [confetti, setConfetti] = useState([]);
-            const [status, setStatus] = useState({ type: 'loading', msg: '🔵 V.8.0 - CONECTANDO A LA NUBE...' });
+            const [status, setStatus] = useState({ type: 'loading', msg: '🔵 V.9.0 - CONECTANDO A GOOGLE...' });
 
             useEffect(() => {
-                console.log("App V.8.0 Iniciada");
                 try {
                     const app = initializeApp(firebaseConfig);
                     const firestore = getFirestore(app);
@@ -87,23 +96,23 @@
                             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                             setRecords(sorted);
-                            setStatus({ type: 'success', msg: '🟢 V.8.0 - SISTEMA ONLINE (LISTO)' });
+                            setStatus({ type: 'success', msg: '🟢 V.9.0 - SISTEMA ONLINE (LISTO)' });
                         }, (err) => {
-                            setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR: REGLAS FIRESTORE' });
+                            setStatus({ type: 'error', msg: '🔴 V.9.0 - ERROR: REGLAS DE FIREBASE' });
                         });
                     }).catch(err => {
-                        setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR: ACTIVA MODO ANÓNIMO' });
+                        setStatus({ type: 'error', msg: '🔴 V.9.0 - ERROR: ACTIVA MODO ANÓNIMO' });
                     });
                 } catch (e) {
-                    setStatus({ type: 'error', msg: '🔴 V.8.0 - ERROR DE CONFIGURACIÓN' });
+                    setStatus({ type: 'error', msg: '🔴 V.9.0 - ERROR TÉCNICO' });
                 }
             }, []);
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
 
             const handleSave = async () => {
-                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre.");
-                if (!formData.info) return alert("⚠️ Escribe qué falta o qué pasó.");
+                if (!formData.empleado) return alert("⚠️ Selecciona tu nombre arriba.");
+                if (!formData.info) return alert("⚠️ Escribe qué falta o qué sucedió.");
 
                 const newLog = {
                     ...formData,
@@ -121,7 +130,7 @@
                     }
                     finalizar();
                 } catch (e) { 
-                    // Backup local si falla
+                    // Backup local si falla internet
                     const saved = localStorage.getItem('ferre_backup');
                     const localData = saved ? JSON.parse(saved) : [];
                     localStorage.setItem('ferre_backup', JSON.stringify([newLog, ...localData]));
@@ -163,26 +172,26 @@
             }
 
             return (
-                <div className="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden">
+                <div className="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden bg-slate-50">
                     {confetti.map(p => <div key={p.id} className="confetti w-2 h-2 bg-yellow-400 rounded-full" style={{left: p.x + '%'}} />)}
                     
-                    {/* BANNER DE ESTADO V.8.0 */}
-                    <div className={`ultra-banner text-[10px] tracking-widest ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white animate-pulse'}`}>
+                    {/* BANNER DE ESTADO V.9.0 */}
+                    <div className={`ultra-banner tracking-widest ${status.type === 'success' ? 'bg-emerald-500 text-white' : status.type === 'error' ? 'bg-red-600 text-white animate-pulse' : 'bg-blue-600 text-white animate-pulse'}`}>
                         {status.msg}
                     </div>
 
-                    <div className="main-content flex flex-col flex-1 pb-10">
-                        <header className="bg-slate-900 p-5 flex justify-between items-center text-white shadow-2xl">
+                    <div className="main-content flex flex-col flex-1 pb-10 px-4">
+                        <header className="bg-slate-900 p-5 rounded-2xl flex justify-between items-center text-white shadow-xl mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg font-black italic">F</div>
+                                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg italic">F</div>
                                 <h1 className="font-black italic text-xl tracking-tighter uppercase leading-none">FerreCheck</h1>
                             </div>
-                            <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl active:scale-95 border border-slate-700">
+                            <button onClick={() => setView('dash')} className="p-2 bg-slate-800 rounded-xl border border-slate-700 active:scale-90 transition-all">
                                 <i data-lucide="bar-chart-3" className="text-yellow-400"></i>
                             </button>
                         </header>
 
-                        <main className="p-4 space-y-6 flex-1">
+                        <main className="space-y-6 flex-1">
                             {view === 'home' && (
                                 <div className="space-y-6 animate__animated animate__fadeIn">
                                     <div className="bg-white p-5 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-5">
@@ -210,7 +219,7 @@
                                     </div>
 
                                     <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2 font-black italic tracking-widest"><i data-lucide="medal" className="text-yellow-500"></i> TOP EQUIPO</h3>
+                                        <h3 className="text-[11px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2 font-black italic tracking-widest"><i data-lucide="medal" className="text-yellow-500"></i> RENDIMIENTO EQUIPO</h3>
                                         <div className="space-y-4">
                                             {leaderboard.slice(0, 3).map((data, index) => (
                                                 <div key={data[0]} className="space-y-1">
@@ -227,7 +236,7 @@
                                 <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-gray-100 animate__animated animate__slideInUp">
                                     <div className={`p-8 border-b flex justify-between items-center ${activeCategory.c} bg-opacity-10`}>
                                         <div className="flex items-center gap-3"><div className={`${activeCategory.c} text-white p-3 rounded-2xl shadow-lg`}><i data-lucide={activeCategory.i}></i></div><h2 className="font-black text-2xl uppercase italic text-slate-800 tracking-tighter">{activeCategory.t}</h2></div>
-                                        <button onClick={() => setView('home')} className="p-2 bg-white/50 rounded-full"><i data-lucide="x" className="text-slate-400"></i></button>
+                                        <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-slate-100"><i data-lucide="x" className="text-slate-400"></i></button>
                                     </div>
                                     <div className="p-8 space-y-6">
                                         <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest">
@@ -247,8 +256,8 @@
                                 <div className="space-y-6 animate__animated animate__fadeIn pb-10">
                                     <button onClick={() => setView('home')} className="p-2 bg-white rounded-full border border-gray-200 shadow-sm"><i data-lucide="arrow-left" className="text-gray-600"></i></button>
                                     <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                        <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50 tracking-widest"><span>Bitácora Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px] font-black">{records.length} TOTAL</span></div>
-                                        <div className="max-h-96 overflow-y-auto no-scrollbar">
+                                        <div className="p-6 border-b font-black text-[10px] uppercase text-gray-400 flex justify-between items-center bg-gray-50/50 tracking-widest"><span>Historial en la Nube</span><span className="bg-slate-800 text-white px-3 py-1 rounded-full text-[9px] font-black">{records.length} TOTAL</span></div>
+                                        <div className="max-h-[400px] overflow-y-auto no-scrollbar">
                                             {records.length === 0 ? <div className="p-10 text-center text-slate-300 italic text-sm font-black uppercase tracking-widest">Esperando reportes...</div> : records.map(r => (
                                                 <div key={r.id || Math.random()} className="p-6 border-b last:border-0 hover:bg-slate-50 transition-colors">
                                                     <div className="flex justify-between items-start mb-1"><span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-slate-100 text-slate-600 tracking-tighter`}>{r.cat}</span><span className="text-[10px] font-bold text-gray-300">{r.time}</span></div>
@@ -262,13 +271,13 @@
                             )}
                         </main>
                     </div>
-                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v8.0 • Tampico</footer>
+                    <footer className="p-8 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">FerreCheck v9.0 • Tampico</footer>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
+        root.render(<App />);
     </script>
 </body>
 </html>
