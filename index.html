@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FerreCheck V.11</title>
+    <title>FerreCheck V.12</title>
     <!-- Herramientas de Diseño -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Firebase (Versión de compatibilidad para evitar errores) -->
+    <!-- Firebase (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -16,66 +16,75 @@
     <style>
         #status-bar {
             position: fixed; top: 0; left: 0; right: 0;
-            background: #f97316; /* NARANJA para que sea imposible no verlo */
-            color: white; text-align: center; padding: 12px;
+            background: #db2777; /* ROSA FUCSIA para confirmación visual */
+            color: white; text-align: center; padding: 15px;
             font-family: sans-serif; font-weight: 900; z-index: 10000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            font-size: 14px;
         }
-        body { background-color: #f1f5f9; padding-top: 60px; font-family: sans-serif; }
-        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn-cat { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 20px; color: white; font-weight: 800; font-size: 10px; text-transform: uppercase; transition: transform 0.2s; }
+        body { background-color: #f8fafc; padding-top: 70px; font-family: sans-serif; }
+        .card { background: white; border-radius: 24px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .btn-cat { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 20px; color: white; font-weight: 800; font-size: 10px; text-transform: uppercase; transition: all 0.2s; }
         .btn-cat:active { transform: scale(0.9); }
-        .selected-btn { border: 4px solid #1e293b !important; transform: scale(1.1); }
     </style>
 </head>
 <body>
 
-    <div id="status-bar">🚀 ALFREDO: VERSIÓN 11.0 DETECTADA - CONECTANDO...</div>
+    <!-- BANNER DE VERIFICACIÓN V.12 -->
+    <div id="status-bar">🚨 ALFREDO: VERSIÓN 12.0 - SI VES ESTO EN ROSA, YA FUNCIONA</div>
 
     <div class="max-w-md mx-auto p-4">
-        <header class="bg-slate-900 text-white p-5 rounded-3xl flex justify-between items-center mb-6 shadow-xl">
-            <h1 class="text-xl font-black italic">FERRECHECK</h1>
+        <header class="bg-slate-900 text-white p-6 rounded-[2rem] flex justify-between items-center mb-6 shadow-2xl">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-slate-900 font-black text-xl shadow-lg">F</div>
+                <h1 class="text-xl font-black italic tracking-tighter">FERRECHECK</h1>
+            </div>
             <div id="counter" class="bg-yellow-400 text-slate-900 px-3 py-1 rounded-full font-black text-xs">0</div>
         </header>
 
         <!-- Selección de Equipo -->
-        <div class="card space-y-4">
+        <div class="card space-y-4 border border-slate-100">
             <div class="flex gap-2" id="sucursales">
-                <button onclick="setSucursal('Tancol')" id="btn-Tancol" class="flex-1 py-3 rounded-xl font-black bg-blue-600 text-white shadow-md">TANCOL</button>
-                <button onclick="setSucursal('Insurgentes')" id="btn-Insurgentes" class="flex-1 py-3 rounded-xl font-black bg-slate-100 text-slate-400">INSURGENTES</button>
+                <button onclick="setSucursal('Tancol')" id="btn-Tancol" class="flex-1 py-4 rounded-2xl font-black bg-blue-600 text-white shadow-lg transition-all">TANCOL</button>
+                <button onclick="setSucursal('Insurgentes')" id="btn-Insurgentes" class="flex-1 py-4 rounded-2xl font-black bg-slate-100 text-slate-400">INSURGENTES</button>
             </div>
-            <div class="grid grid-cols-5 gap-1" id="empleados">
+            <div class="grid grid-cols-5 gap-2" id="empleados">
                 <!-- Botones se generan por JS -->
             </div>
         </div>
 
         <!-- Categorías -->
         <div class="grid grid-cols-5 gap-2 mb-6">
-            <button onclick="selectCat('perdida', 'Venta Perdida', 'bg-red-500')" class="btn-cat bg-red-500" id="cat-perdida">Pérdida</button>
-            <button onclick="selectCat('devol', 'Devolución', 'bg-orange-500')" class="btn-cat bg-orange-500" id="cat-devol">Devol</button>
-            <button onclick="selectCat('nota', 'Comentario', 'bg-blue-500')" class="btn-cat bg-blue-500" id="cat-nota">Nota</button>
-            <button onclick="selectCat('stock', 'Stock', 'bg-emerald-500')" class="btn-cat bg-emerald-500" id="cat-stock">Stock</button>
-            <button onclick="selectCat('insumo', 'Insumo', 'bg-purple-500')" class="btn-cat bg-purple-500" id="cat-insumo">Insumo</button>
+            <button onclick="selectCat('perdida', 'Venta Perdida', 'bg-red-500')" class="btn-cat bg-red-500 shadow-lg" id="cat-perdida">Pérdida</button>
+            <button onclick="selectCat('devol', 'Devolución', 'bg-orange-500 shadow-lg')" class="btn-cat bg-orange-500" id="cat-devol">Devol</button>
+            <button onclick="selectCat('nota', 'Comentario', 'bg-blue-500 shadow-lg')" class="btn-cat bg-blue-500" id="cat-nota">Nota</button>
+            <button onclick="selectCat('stock', 'Stock', 'bg-emerald-500 shadow-lg')" class="btn-cat bg-emerald-500" id="cat-stock">Stock</button>
+            <button onclick="selectCat('insumo', 'Insumo', 'bg-purple-500 shadow-lg')" class="btn-cat bg-purple-500" id="cat-insumo">Insumo</button>
         </div>
 
         <!-- Formulario -->
-        <div id="form-container" class="hidden animate__animated animate__fadeInUp">
-            <div class="card border-t-8" id="form-card">
-                <h3 id="form-title" class="font-black uppercase mb-4 text-slate-700">Detalle</h3>
-                <input type="text" id="info-input" placeholder="¿Qué pasó?..." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold mb-4 outline-none focus:border-blue-500">
-                <button onclick="saveReport()" id="save-btn" class="w-full p-5 rounded-2xl text-white font-black text-xl shadow-lg active:scale-95 transition-all">GUARDAR REPORTE</button>
+        <div id="form-container" class="hidden">
+            <div class="card border-t-[12px] shadow-2xl" id="form-card">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="form-title" class="font-black uppercase text-slate-700 tracking-tight">Detalle</h3>
+                    <button onclick="document.getElementById('form-container').classList.add('hidden')" class="text-slate-300 hover:text-slate-500"><i data-lucide="x"></i></button>
+                </div>
+                <input type="text" id="info-input" placeholder="¿Qué material o qué pasó?..." class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold mb-6 outline-none focus:border-blue-500 transition-all shadow-inner text-lg">
+                <button onclick="saveReport()" id="save-btn" class="w-full p-6 rounded-[1.5rem] text-white font-black text-xl shadow-2xl active:scale-95 transition-all">GUARDAR REPORTE</button>
             </div>
         </div>
 
         <!-- Historial Rápido -->
-        <div class="mt-8">
-            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Últimos Registros</h4>
-            <div id="history-list" class="space-y-2"></div>
+        <div class="mt-10">
+            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+                <i data-lucide="history" class="w-3 h-3"></i> ÚLTIMOS REGISTROS NUBE
+            </h4>
+            <div id="history-list" class="space-y-3"></div>
         </div>
     </div>
 
     <script>
-        // CONFIGURACIÓN DE FIREBASE
+        // CONFIGURACIÓN DE FIREBASE (ALFREDO)
         const config = {
             apiKey: "AIzaSyBcmriLjBc_S1W86R1bucP6Jy8iAU9sv6Q",
             authDomain: "ferrecheck-tampico.firebaseapp.com",
@@ -88,12 +97,10 @@
         firebase.initializeApp(config);
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const appId = "ferrecheck-tampico-v11";
+        const appId = "ferrecheck-v12-oficial";
 
         let selectedEmpleado = "";
         let selectedSucursal = "Tancol";
-        let selectedCatId = "";
-        let selectedColor = "";
 
         // Inicializar empleados
         const emps = ['Adrian', 'Ana', 'Emi', 'Fred', 'Sury'];
@@ -102,84 +109,99 @@
             const btn = document.createElement('button');
             btn.innerText = e;
             btn.id = 'emp-' + e;
-            btn.className = "py-4 rounded-xl text-[10px] font-black bg-slate-100 text-slate-400";
+            btn.className = "py-5 rounded-xl text-[10px] font-black bg-slate-50 text-slate-400 border border-slate-100 transition-all";
             btn.onclick = () => setEmpleado(e);
             empDiv.appendChild(btn);
         });
 
         function setEmpleado(name) {
-            emps.forEach(e => document.getElementById('emp-' + e).className = "py-4 rounded-xl text-[10px] font-black bg-slate-100 text-slate-400");
-            document.getElementById('emp-' + name).className = "py-4 rounded-xl text-[10px] font-black bg-slate-800 text-white shadow-lg";
+            emps.forEach(e => document.getElementById('emp-' + e).className = "py-5 rounded-xl text-[10px] font-black bg-slate-50 text-slate-400 border border-slate-100");
+            document.getElementById('emp-' + name).className = "py-5 rounded-xl text-[10px] font-black bg-slate-800 text-white shadow-xl scale-105 border-slate-800";
             selectedEmpleado = name;
         }
 
         function setSucursal(suc) {
-            ['Tancol', 'Insurgentes'].forEach(s => document.getElementById('btn-' + s).className = "flex-1 py-3 rounded-xl font-black bg-slate-100 text-slate-400");
-            document.getElementById('btn-' + suc).className = "flex-1 py-3 rounded-xl font-black bg-blue-600 text-white shadow-lg";
+            ['Tancol', 'Insurgentes'].forEach(s => document.getElementById('btn-' + s).className = "flex-1 py-4 rounded-2xl font-black bg-slate-100 text-slate-400");
+            document.getElementById('btn-' + suc).className = "flex-1 py-4 rounded-2xl font-black bg-blue-600 text-white shadow-lg scale-105";
             selectedSucursal = suc;
         }
 
         function selectCat(id, title, colorClass) {
-            if(!selectedEmpleado) return alert("Selecciona tu nombre arriba");
-            selectedCatId = id;
-            selectedColor = colorClass;
+            if(!selectedEmpleado) return alert("⚠️ Selecciona quién eres primero");
             document.getElementById('form-container').classList.remove('hidden');
             document.getElementById('form-title').innerText = title;
-            document.getElementById('form-card').style.borderColor = colorClass.replace('bg-', '#');
-            document.getElementById('save-btn').className = `w-full p-5 rounded-2xl text-white font-black text-xl shadow-lg active:scale-95 transition-all ${colorClass}`;
+            document.getElementById('form-card').style.borderColor = colorClass.includes('red') ? '#ef4444' : 
+                                                                    colorClass.includes('orange') ? '#f97316' : 
+                                                                    colorClass.includes('blue') ? '#3b82f6' : 
+                                                                    colorClass.includes('emerald') ? '#10b981' : '#a855f7';
+            document.getElementById('save-btn').className = `w-full p-6 rounded-[1.5rem] text-white font-black text-xl shadow-2xl active:scale-95 transition-all ${colorClass}`;
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
         async function saveReport() {
             const info = document.getElementById('info-input').value;
-            if(!info) return alert("Escribe qué sucedió");
+            if(!info) return alert("⚠️ Escribe qué sucedió");
             
             const btn = document.getElementById('save-btn');
+            btn.innerText = "SINCRONIZANDO...";
             btn.disabled = true;
-            btn.innerText = "GUARDANDO...";
 
             const data = {
                 empleado: selectedEmpleado,
                 sucursal: selectedSucursal,
-                cat: selectedCatId,
                 info: info,
                 createdAt: new Date().toISOString(),
-                time: new Date().toLocaleTimeString()
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
 
             try {
                 await db.collection('artifacts').doc(appId).collection('feedbacks').add(data);
-                alert("✅ REPORTE GUARDADO");
                 document.getElementById('info-input').value = "";
                 document.getElementById('form-container').classList.add('hidden');
+                // Alerta bonita manual
+                const successMsg = document.createElement('div');
+                successMsg.className = "fixed inset-0 z-[20000] bg-white flex items-center justify-center p-10 text-center animate__animated animate__fadeIn";
+                successMsg.innerHTML = `<div><div class="w-20 h-20 bg-emerald-500 rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg"><i data-lucide="check" class="text-white w-10 h-10"></i></div><h1 class="text-3xl font-black italic uppercase">¡LISTO!</h1><p class="text-slate-400 font-bold mt-2 uppercase">Guardado en la Nube</p></div>`;
+                document.body.appendChild(successMsg);
+                if (window.lucide) window.lucide.createIcons();
+                setTimeout(() => successMsg.remove(), 2500);
             } catch (e) {
-                console.error(e);
-                alert("❌ ERROR AL GUARDAR. Pero el sistema está vivo.");
+                alert("❌ Error de Nube: " + e.message);
             } finally {
-                btn.disabled = false;
                 btn.innerText = "GUARDAR REPORTE";
+                btn.disabled = false;
             }
         }
 
-        // Conexión Nube
+        // Conectar con Google
         auth.signInAnonymously().then(() => {
             const bar = document.getElementById('status-bar');
-            bar.style.background = "#10b981";
-            bar.innerText = "🟢 SISTEMA ONLINE - LISTO";
+            bar.style.background = "#10b981"; // VERDE
+            bar.innerText = "🟢 V.12 - SISTEMA CONECTADO CON ÉXITO";
             
             db.collection('artifacts').doc(appId).collection('feedbacks')
-              .orderBy('createdAt', 'desc').limit(10).onSnapshot(snap => {
+              .orderBy('createdAt', 'desc').limit(15).onSnapshot(snap => {
                 const list = document.getElementById('history-list');
                 list.innerHTML = "";
                 document.getElementById('counter').innerText = snap.size;
                 snap.forEach(doc => {
                     const r = doc.data();
-                    list.innerHTML += `<div class="bg-white p-3 rounded-xl border border-slate-100 text-[10px] font-bold uppercase">
-                        <span class="text-blue-500">${r.time}</span> - ${r.info} (${r.empleado})
+                    list.innerHTML += `<div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm animate__animated animate__fadeIn">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-tighter">${r.sucursal}</span>
+                            <span class="text-[9px] font-bold text-slate-300 uppercase">${r.time}</span>
+                        </div>
+                        <p class="text-sm font-black text-slate-800 uppercase italic leading-tight">"${r.info}"</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase mt-2">Registró: ${r.empleado}</p>
                     </div>`;
                 });
+            }, err => {
+                bar.style.background = "#ef4444"; // ROJO
+                bar.innerText = "🔴 V.12 - ERROR: VERIFICA REGLAS FIRESTORE";
             });
         });
+
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 </html>
